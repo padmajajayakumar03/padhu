@@ -1,0 +1,50 @@
+* AD620 Frontend Simplified LTspice Netlist (single-supply, ref=1.65V)
+* Replace EAMP with actual AD620 macro if available
+*
+* Power
+V3V3  V3V3  0  DC 3.3
+V5    V5    0  DC 5
+
+* Mid-rail reference for single-supply
+RREF1 V3V3 VREF 10k
+RREF2 0    VREF 10k
+CREF  VREF 0    10u
+CREF2 VREF 0    100n
+
+* ENG source (differential microvolt-level + noise)
+VINP INP 0 SINE(0 250u 500) ; 250 uV pk @ 500 Hz
+VINN INN 0 0
+RINP INP N1 100k
+RINN INN N2 100k
+
+* AC coupling high-pass (optional)
+CINP N1 INP_HP 1u
+CINN N2 INN_HP 1u
+RHP1 INP_HP VREF 1Meg
+RHP2 INN_HP VREF 1Meg
+
+* Instrumentation amp (behavioral) G≈100, output centered at VREF
+* VOUT = VREF + 100*(INP_HP - INN_HP)
+EAMP OUT 0 VALUE = { V(VREF) + 100*( V(INP_HP)-V(INN_HP) ) }
+
+* Output RC low-pass and protection to ADC
+RPROT OUT ADC 4.7k
+CADC  ADC 0  100n
+
+* ADC presented as high-Z probe
+RADC ADC 0 10Meg
+
+* Supplies (behavioral amp runs off ideal supplies implicitly)
+* If using an actual AD620 model, connect pins: +Vs=V5, -Vs=0, REF=VREF
+
+* Analysis
+.tran 0 50m 0 10u
+*.ac dec 50 1 50k
+
+*.plot tran V(OUT) V(ADC)
+.control
+run
+plot V(OUT) V(ADC)
+.endc
+
+.end
